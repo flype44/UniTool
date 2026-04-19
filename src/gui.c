@@ -469,6 +469,8 @@ BOOL BuildGUI(struct Screen * myScreen)
 
     RGA_VideoStatus vstat;
 
+    rga_flush_pipe();
+    
     if (rga_get_video_status(&vstat)) {
         set(slScanlines, MUIA_Numeric_Value, vstat.scanline_level);
         set(slScanlinesLaced, MUIA_Numeric_Value, vstat.scanline_level_laced);
