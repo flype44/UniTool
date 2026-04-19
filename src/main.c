@@ -5,6 +5,7 @@
 #include <proto/unicam.h>
 
 #include "messages.h"
+#include "presets.h"
 
 int main(int);
 
@@ -39,13 +40,15 @@ struct ExecBase *       SysBase;
 struct DosLibrary *     DOSBase;
 APTR                    UnicamBase;
 
-#define APPNAME "EmuControl"
+#define APPNAME "UniTool"
 
 static const char version[] __attribute__((used)) = "$VER: " VERSION_STRING;
 
-#define RDA_TEMPLATE "WIDTH/K/N,HEIGHT/K/N,X/K/N,Y/K/N,B/K/N,C/K/N,ASPECT/K/N,PHASE/K/N,SCALER/K/N,SMOOTH/S,INTEGER/S,GUI/S,QUIET/S"
+#define RDA_TEMPLATE "LOAD/K,SAVE/K,WIDTH/K/N,HEIGHT/K/N,X/K/N,Y/K/N,B/K/N,C/K/N,ASPECT/K/N,PHASE/K/N,SCALER/K/N,SMOOTH/S,INTEGER/S,GUI/S,QUIET/S"
 
 enum {
+    OPT_PRESET_LOAD,
+    OPT_PRESET_SAVE,
     OPT_WIDTH,
     OPT_HEIGHT,
     OPT_DX,
@@ -118,75 +121,129 @@ int main(int wantGUI)
             if (!silent)
                 Printf("%s\n", (ULONG)&VERSION_STRING[6]);
 
-            if (result[OPT_WIDTH]) {
-                width = *(LONG*)(result[OPT_WIDTH]);
-                
-                if (width < 0 || width > max_width) {
-                    width = current_width;
+            if (result[OPT_PRESET_LOAD])
+            {
+                STRPTR name = (STRPTR)(result[OPT_PRESET_LOAD]);
+                struct Preset p;
+
+                if (LoadPreset(&p, name, NULL))
+                {
+                    if (!silent) {
+                        Printf("Loading preset '%s'\n", (ULONG)name);
+                    }
+
+                    wantGUI = 0;
+
+                    if (p.pr_Width > 0 && p.pr_Width <= max_width) {
+                        width = p.pr_Width;
+                    }
+
+                    if (p.pr_Height > 0 && p.pr_Height <= max_height) {
+                        height = p.pr_Height;
+                    }
+
+                    if (p.pr_DX + width <= max_width) {
+                        dx = p.pr_DX;
+                    }
+
+                    if (p.pr_DY + height <= max_height) {
+                        dy = p.pr_DY;
+                    }
+
+                    if (p.pr_B <= 1000) {
+                        b = p.pr_B;
+                    }
+
+                    if (p.pr_C <= 1000) {
+                        c = p.pr_C;
+                    }
+
+                    if (p.pr_Aspect >= 333 && p.pr_Aspect <= 3000) {
+                        aspect = p.pr_Aspect;
+                    }
+
+                    if (p.pr_Scaler <= 3) {
+                        scaler = p.pr_Scaler;
+                    }
+
+                    phase = p.pr_Phase;
+                    smooth = p.pr_Smooth;
+                    integer = p.pr_Integer;
+
                 }
             }
-
-            if (result[OPT_HEIGHT]) {
-                height = *(LONG*)(result[OPT_HEIGHT]);
-                
-                if (height < 0 || height > max_height) {
-                    height = current_height;
+            else
+            {
+                if (result[OPT_WIDTH]) {
+                    width = *(LONG*)(result[OPT_WIDTH]);
+                    
+                    if (width < 0 || width > max_width) {
+                        width = current_width;
+                    }
                 }
-            }
 
-            if (result[OPT_DX]) {
-                dx = *(LONG*)(result[OPT_DX]);
-                
-                if (dx < 0 || dx + width > max_width) {
-                    dx = current_dx;
+                if (result[OPT_HEIGHT]) {
+                    height = *(LONG*)(result[OPT_HEIGHT]);
+                    
+                    if (height < 0 || height > max_height) {
+                        height = current_height;
+                    }
                 }
-            }
 
-            if (result[OPT_DY]) {
-                dy = *(LONG*)(result[OPT_DY]);
-                
-                if (dy < 0 || dy + height > max_height) {
-                    dy = current_dy;
+                if (result[OPT_DX]) {
+                    dx = *(LONG*)(result[OPT_DX]);
+                    
+                    if (dx < 0 || dx + width > max_width) {
+                        dx = current_dx;
+                    }
                 }
-            }
 
-            if (result[OPT_B]) {
-                b = *(LONG*)(result[OPT_B]);
-                
-                if (b < 0 || b > 1000) {
-                    b = -1;
+                if (result[OPT_DY]) {
+                    dy = *(LONG*)(result[OPT_DY]);
+                    
+                    if (dy < 0 || dy + height > max_height) {
+                        dy = current_dy;
+                    }
                 }
-            }
 
-            if (result[OPT_C]) {
-                c = *(LONG*)(result[OPT_C]);
-                
-                if (c < 0 || c > 1000) {
-                    c = -1;
+                if (result[OPT_B]) {
+                    b = *(LONG*)(result[OPT_B]);
+                    
+                    if (b < 0 || b > 1000) {
+                        b = -1;
+                    }
                 }
-            }
 
-            if (result[OPT_ASPECT]) {
-                aspect = *(LONG*)(result[OPT_ASPECT]);
-                
-                if (aspect < 333 || aspect > 3000) {
-                    aspect = -1;
+                if (result[OPT_C]) {
+                    c = *(LONG*)(result[OPT_C]);
+                    
+                    if (c < 0 || c > 1000) {
+                        c = -1;
+                    }
                 }
-            }
 
-            if (result[OPT_PHASE]) {
-                phase = *(LONG*)(result[OPT_PHASE]);
-                
-                if (phase < 0 || phase > 255) {
-                    phase = -1;
+                if (result[OPT_ASPECT]) {
+                    aspect = *(LONG*)(result[OPT_ASPECT]);
+                    
+                    if (aspect < 333 || aspect > 3000) {
+                        aspect = -1;
+                    }
                 }
-            }
 
-            if (result[OPT_SCALER]) {
-                scaler = *(LONG*)(result[OPT_SCALER]);
-                
-                if (scaler < 0 || scaler > 3) {
-                    scaler = -1;
+                if (result[OPT_PHASE]) {
+                    phase = *(LONG*)(result[OPT_PHASE]);
+                    
+                    if (phase < 0 || phase > 255) {
+                        phase = -1;
+                    }
+                }
+
+                if (result[OPT_SCALER]) {
+                    scaler = *(LONG*)(result[OPT_SCALER]);
+                    
+                    if (scaler < 0 || scaler > 3) {
+                        scaler = -1;
+                    }
                 }
             }
 

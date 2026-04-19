@@ -10,6 +10,7 @@ endif()
 
 add_executable(UniTool
     src/main.c
+    src/presets.c
 )
 
 target_link_options(UniTool PRIVATE -ffreestanding -m68040 -s -nostdlib -nostartfiles -Wl,-e,__start)
