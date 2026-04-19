@@ -12,6 +12,8 @@
 #include <clib/alib_protos.h>
 
 #include "messages.h"
+#include "rga_common.h"
+#include "rga_host.h"
 
 struct GfxBase *        GfxBase         = NULL;
 struct IntuitionBase *  IntuitionBase   = NULL;
@@ -38,6 +40,7 @@ struct Hook cropSizeHook;
 struct Hook cropOffsetHook;
 struct Hook aspectHook;
 struct Hook configHook;
+struct Hook scanlineHook;
 struct Window *backdrop;
 struct Screen *screen;
 
@@ -315,6 +318,18 @@ ULONG ConfigHookFunc(struct Hook *hook, Object *app, void **params)
     return 0;
 }
 
+ULONG ScanlineHookFunc(struct Hook *hook, Object *app, void **params)
+{
+    ULONG sc, scl;
+
+    get(slScanlines, MUIA_Numeric_Value, &sc);
+    get(slScanlinesLaced, MUIA_Numeric_Value, &scl);
+
+    rga_set_scanlines(sc, scl);
+
+    return 0;
+}
+
 BOOL BuildGUI(struct Screen * myScreen)
 {
     extern APTR UnicamBase;
@@ -452,6 +467,13 @@ BOOL BuildGUI(struct Screen * myScreen)
         End, // WindowObject
     End; // ApplicationObject
 
+    RGA_VideoStatus vstat;
+
+    if (rga_get_video_status(&vstat)) {
+        set(slScanlines, MUIA_Numeric_Value, vstat.scanline_level);
+        set(slScanlinesLaced, MUIA_Numeric_Value, vstat.scanline_level_laced);
+    }
+
     DoMethod(win, MUIM_Window_SetCycleChain,
         slCropW, slCropH, slCropX, slCropY, slAspect,
         chInteger, chSmooth, slB, slC, slPhase,
@@ -496,6 +518,7 @@ BOOL BuildGUI(struct Screen * myScreen)
     aspectHook.h_Entry     = (HOOKFUNC)AspectHookFunc;
     kernelHook.h_Entry     = (HOOKFUNC)KernelHookFunc;
     configHook.h_Entry     = (HOOKFUNC)ConfigHookFunc;
+    scanlineHook.h_Entry   = (HOOKFUNC)ScanlineHookFunc;
 
     DoMethod(slCropX, MUIM_Notify, MUIA_Numeric_Value, MUIV_EveryTime,
         app, 2, MUIM_CallHook, &cropOffsetHook);
@@ -526,6 +549,12 @@ BOOL BuildGUI(struct Screen * myScreen)
 
     DoMethod(chSmooth, MUIM_Notify, MUIA_Selected, MUIV_EveryTime,
         app, 2, MUIM_CallHook, &configHook);
+
+    DoMethod(slScanlines, MUIM_Notify, MUIA_Numeric_Value, MUIV_EveryTime,
+        app, 2, MUIM_CallHook, &scanlineHook);
+
+    DoMethod(slScanlinesLaced, MUIM_Notify, MUIA_Numeric_Value, MUIV_EveryTime,
+        app, 2, MUIM_CallHook, &scanlineHook);
 
     DoMethod(menuQuit, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
         (ULONG)app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);

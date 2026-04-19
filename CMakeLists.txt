@@ -12,6 +12,7 @@ add_executable(UniTool
     src/main.c
     src/gui.c
     src/presets.c
+    src/rga_host.c
 )
 
 target_link_options(UniTool PRIVATE -ffreestanding -m68040 -s -nostdlib -nostartfiles -Wl,-e,__start)
