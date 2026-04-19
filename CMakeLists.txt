@@ -10,6 +10,7 @@ endif()
 
 add_executable(UniTool
     src/main.c
+    src/gui.c
     src/presets.c
 )
 
