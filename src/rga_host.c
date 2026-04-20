@@ -30,12 +30,12 @@ bool rga_exec_cmd(uint8_t cmd, uint32_t addr, uint16_t payload_out, uint16_t *pa
     uint16_t tx[8];
     int idx = 0;
 
-    bool has_payload = (cmd == _CMD_WRITE ||
-                        cmd == CMD_FLASH_DATA ||
-                        cmd == CMD_GET_VERSION ||
-                        cmd == CMD_GET_GIT ||
-                        cmd == CMD_GET_STATUS ||
-                        cmd == CMD_SET_SCANLINE);
+    bool has_payload = (cmd == FTCMD_WRITE ||
+                        cmd == FTCMD_FLASH_DATA ||
+                        cmd == FTCMD_GET_VERSION ||
+                        cmd == FTCMD_GET_GIT ||
+                        cmd == FTCMD_GET_STATUS ||
+                        cmd == FTCMD_SET_SCANLINE);
 
     tx[idx++] = STX_MAGIC;
     tx[idx++] = ((uint16_t)cmd << 8) | (has_payload ? 1 : 0);
@@ -84,7 +84,7 @@ bool rga_update_firmware(const char* filename) {
     rewind(fp);
 
     printf("Erasing Staging Area...\n");
-    if (!rga_exec_cmd(CMD_FLASH_ERASE, 0, 0, NULL)) {
+    if (!rga_exec_cmd(FTCMD_FLASH_ERASE, 0, 0, NULL)) {
         fclose(fp); return false;
     }
 
@@ -94,7 +94,7 @@ bool rga_update_firmware(const char* filename) {
     long sent = 0;
 
     while(fread(&buffer, 2, 1, fp) == 1) {
-        if (!rga_exec_cmd(CMD_FLASH_DATA, 0, buffer, NULL)) {
+        if (!rga_exec_cmd(FTCMD_FLASH_DATA, 0, buffer, NULL)) {
             printf("Error at byte %ld\n", sent);
             fclose(fp); return false;
         }
@@ -106,7 +106,7 @@ bool rga_update_firmware(const char* filename) {
     printf("\nCommitting...\n");
     // Auf 4KB aufrunden
     uint32_t size_aligned = (filesize + 4095) & ~4095;
-    rga_exec_cmd(CMD_FLASH_COMMIT, size_aligned, 0, NULL);
+    rga_exec_cmd(FTCMD_FLASH_COMMIT, size_aligned, 0, NULL);
 
     return true;
 }
@@ -143,7 +143,7 @@ bool rga_get_video_status(RGA_VideoStatus *status) {
 
     while (offset < size) {
         uint16_t chunk = 0;
-        if (!rga_exec_cmd(CMD_GET_STATUS, 0, (uint16_t)offset, &chunk)) return false;
+        if (!rga_exec_cmd(FTCMD_GET_STATUS, 0, (uint16_t)offset, &chunk)) return false;
         if (offset < size) ptr[offset++] = (chunk >> 8) & 0xFF;
         if (offset < size) ptr[offset++] = chunk & 0xFF;
     }
@@ -159,5 +159,5 @@ bool rga_set_scanlines(uint8_t level_normal, uint8_t level_laced) {
     if (level_normal > 4) level_normal = 4;
     if (level_laced > 4) level_laced = 4;
     uint16_t payload = (level_normal << 8) | level_laced;
-    return rga_exec_cmd(CMD_SET_SCANLINE, 0, payload, NULL);
+    return rga_exec_cmd(FTCMD_SET_SCANLINE, 0, payload, NULL);
 }

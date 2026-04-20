@@ -10,23 +10,22 @@
 #define STX_MAGIC     0x55AA
 #define ETX_MAGIC     0xEEFF
 
-#define _CMD_READ         0x01 //reads the ram disk
-#define _CMD_WRITE        0x02 //writes the ram disk
+#define FTCMD_READ         0x01 //reads the ram disk
+#define FTCMD_WRITE        0x02 //writes the ram disk
 //..//
-#define CMD_FLASH_ERASE  0x10 //erase staging
-#define CMD_FLASH_DATA   0x11 //write staging
-#define CMD_FLASH_COMMIT 0x12 //commit staging to main flash and reboot
-#define CMD_SAVE_SETTING 0x13 //write scanline and deinterlace settings into flash
+#define FTCMD_FLASH_ERASE  0x10 //erase staging
+#define FTCMD_FLASH_DATA   0x11 //write staging
+#define FTCMD_FLASH_COMMIT 0x12 //commit staging to main flash and reboot
+#define FTCMD_SAVE_SETTING 0x13 //write scanline and deinterlace settings into flash
 //..//
-#define CMD_GET_VERSION  0x20 //returns the version string
-#define CMD_GET_GIT      0x21 //returns the git hash string
-#define CMD_GET_STATUS   0x22 //returns the current video statistics
-#define CMD_GET_SCANLINE 0x23 //returns the current scanline settings
-#define CMD_GET_DEINT    0x24 //returns the current deinterlace settings
+#define FTCMD_GET_VERSION  0x20 //returns the version string
+#define FTCMD_GET_GIT      0x21 //returns the git hash string
+#define FTCMD_GET_STATUS   0x22 //returns the current video statistics
+#define FTCMD_GET_SCANLINE 0x23 //returns the current scanline settings
+#define FTCMD_GET_DEINT    0x24 //returns the current deinterlace settings
 //..//
-#define CMD_SET_SCANLINE 0x28 //sets the scanline settings
-#define CMD_SET_DEINT    0x29 //sets the deinterlace settings
-
+#define FTCMD_SET_SCANLINE 0x28 //sets the scanline settings
+#define FTCMD_SET_DEINT    0x29 //sets the deinterlace settings
 
 #define STATUS_OK        0x0000
 #define STATUS_ERR_ADDR  0x0001
