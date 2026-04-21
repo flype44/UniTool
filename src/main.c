@@ -44,7 +44,7 @@ APTR                    UnicamBase    = NULL;
 
 #define APPNAME "UniTool"
 
-static const char version[] __attribute__((used)) = "$VER: " VERSION_STRING;
+const char version[] __attribute__((used)) = VERSION_STRING;
 
 #define RDA_TEMPLATE "LOAD/K,SAVE/K,WIDTH/K/N,HEIGHT/K/N,X/K/N,Y/K/N,B/K/N,C/K/N,ASPECT/K/N,PHASE/K/N,SCALER/K/N,SMOOTH/S,INTEGER/S,GUI/S,QUIET/S"
 
@@ -131,7 +131,7 @@ int main(int wantGUI)
             else
             {
                 if (!silent)
-                    Printf("%s\n", (ULONG)&VERSION_STRING[6]);
+                    Printf("%s\n", (ULONG)&version[6]);
 
                 if (result[OPT_PRESET_LOAD])
                 {

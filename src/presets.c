@@ -22,12 +22,13 @@ struct PrefHeader
 } prhd = { 2, 0, 0 };
 
 const char default_dir[] = "SYS:Prefs/Presets";
+const char iffparse_name[] = "iffparse.library";
 
 int SavePreset(struct Preset * preset, char *name, char *path)
 {
     char dirname[256];
     int retval = 0;
-    struct Library * IFFParseBase = OpenLibrary("iffparse.library", 0);
+    struct Library * IFFParseBase = OpenLibrary(iffparse_name, 0);
 
     if (IFFParseBase != NULL)
     {
@@ -91,7 +92,7 @@ int LoadPreset(struct Preset * preset, char * name, char *path)
 {
     char dirname[256];
     int retval = 0;
-    struct Library * IFFParseBase = OpenLibrary("iffparse.library", 0);
+    struct Library * IFFParseBase = OpenLibrary(iffparse_name, 0);
 
     if (IFFParseBase != NULL)
     {

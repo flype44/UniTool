@@ -1,6 +1,8 @@
 #include <graphics/gfxbase.h>
 #include <graphics/displayinfo.h>
 #include <libraries/mui.h>
+#include <libraries/iffparse.h>
+#include <datatypes/textclass.h>
 
 #include <proto/asl.h>
 #include <proto/exec.h>
@@ -10,6 +12,7 @@
 #include <proto/muimaster.h>
 #include <proto/unicam.h>
 #include <proto/devicetree.h>
+#include <proto/iffparse.h>
 
 #include <clib/alib_protos.h>
 
@@ -37,6 +40,7 @@ Object *                slC             = NULL;
 Object *                slPhase         = NULL;
 Object *                menuOpen        = NULL;
 Object *                menuSaveAs      = NULL;
+Object *                menuCopyConfig  = NULL;
 Object *                menuQuit        = NULL;
 Object *                menuDefaults    = NULL;
 Object *                menuLastUsed    = NULL;
@@ -51,6 +55,7 @@ struct Hook defaultsHook;
 struct Hook lastUsedHook;
 struct Hook openHook;
 struct Hook saveAsHook;
+struct Hook copyConfigHook;
 struct Window *backdrop;
 struct Screen *screen;
 
@@ -411,6 +416,159 @@ ULONG ResetToLastUsedHookFunc()
     return 0;
 }
 
+static LONG _strlen(const char *text)
+{
+    LONG res = 0;
+
+    if (text != NULL)
+    {
+        while (*text++) res++;
+    }
+
+    return res;
+}
+
+void CopyToClipboard(char *text)
+{
+    extern const char iffparse_name[];
+    struct Library *IFFParseBase = OpenLibrary(iffparse_name, 0);
+
+    if (!IFFParseBase) return;
+
+    struct IFFHandle *iff = AllocIFF();
+    if (!iff) return;
+
+    iff->iff_Stream = (ULONG)OpenClipboard(PRIMARY_CLIP);
+    if (!iff->iff_Stream) { FreeIFF(iff); return; }
+
+    InitIFFasClip(iff);
+
+    if (!OpenIFF(iff, IFFF_WRITE))
+    {
+        PushChunk(iff, ID_FTXT, ID_FORM, IFFSIZE_UNKNOWN);
+        PushChunk(iff, 0, ID_CHRS, IFFSIZE_UNKNOWN);
+        WriteChunkBytes(iff, text, _strlen(text));
+        PopChunk(iff);  /* CHRS */
+        PopChunk(iff);  /* FORM */
+        CloseIFF(iff);
+    }
+
+    CloseClipboard((struct ClipboardHandle *)iff->iff_Stream);
+    FreeIFF(iff);
+    CloseLibrary(IFFParseBase);
+}
+
+static void StuffChar(UBYTE c __asm__("d0"), UBYTE **ptr __asm__("a3"))
+{
+    *(*ptr)++ = c;
+}
+
+ULONG CopyConfigHookFunc()
+{
+    ULONG tmp;
+    ULONG full_w, full_h;
+    BYTE boot = 0;
+    static char str[512];
+    char *ptr = str;
+
+    APTR DeviceTreeBase = OpenResource("devicetree.resource");
+    APTR key = DT_OpenKey("/emu68/unicam");
+
+    if (key)
+    {
+        const UWORD *u16;
+
+        u16 = DT_GetPropValue(DT_FindProperty(key, "full-size"));
+        full_w = u16[0];
+        full_h = u16[1];
+
+        const char *str = DT_GetPropValue(DT_FindProperty(key, "status"));
+        if (str[0] == 'o' && str[1] == 'k' && str[2] == 'a' && str[3] == 'y' && str[4] == 0) {
+            boot = 1;
+        }
+
+        DT_CloseKey(key);
+    }
+
+    RawDoFmt("dtoverlay=unicam", NULL, (void*)StuffChar, &ptr); ptr--;
+
+    if (boot) {
+        RawDoFmt(",boot", NULL, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    if (full_w != 720) {
+        RawDoFmt(",full_width=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    if (full_h != 576) {
+        RawDoFmt(",full_height=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slCropW, MUIA_Numeric_Value, &tmp);
+    if (tmp != full_w) {
+        RawDoFmt(",width=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+    
+    get(slCropH, MUIA_Numeric_Value, &tmp);
+    if (tmp != full_h) {
+        RawDoFmt(",height=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slCropX, MUIA_Numeric_Value, &tmp);
+    if (tmp != 0) {
+        RawDoFmt(",x=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slCropY, MUIA_Numeric_Value, &tmp);
+    if (tmp != 0) {
+        RawDoFmt(",y=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slAspect, MUIA_Numeric_Value, &tmp);
+    if (tmp != 1000) {
+        RawDoFmt(",aspect=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slB, MUIA_Numeric_Value, &tmp);
+    if (tmp != 200) {
+        RawDoFmt(",b=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slC, MUIA_Numeric_Value, &tmp);
+    if (tmp != 400) {
+        RawDoFmt(",c=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slPhase, MUIA_Numeric_Value, &tmp);
+    if (tmp != 64) {
+        RawDoFmt(",phase=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(chSmooth, MUIA_Selected, &tmp);
+    if (tmp) {
+        RawDoFmt(",smooth", NULL, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(chInteger, MUIA_Selected, &tmp);
+    if (tmp) {
+        RawDoFmt(",integer", NULL, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slScanlines, MUIA_Numeric_Value, &tmp);
+    if (tmp != 4) {
+        RawDoFmt(",scanlines=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    get(slScanlinesLaced, MUIA_Numeric_Value, &tmp);
+    if (tmp != 4) {
+        RawDoFmt(",laced_scanlines=%ld", &tmp, (void*)StuffChar, &ptr); ptr--;
+    }
+
+    CopyToClipboard(str);
+
+    return 0;
+}
+
 ULONG OpenHookFunc()
 {
     struct Library *AslBase = OpenLibrary("asl.library", 0);
@@ -537,11 +695,12 @@ ULONG SaveAsHookFunc()
 
 BOOL BuildGUI(struct Screen * myScreen)
 {
+    extern const char version[];
     extern APTR UnicamBase;
 
     app = ApplicationObject,
         MUIA_Application_Title,       "UniTool",
-        MUIA_Application_Version,     "$VER: " VERSION_STRING,
+        MUIA_Application_Version,     version,
         MUIA_Application_Base,        "UNITOOL",
 
         MUIA_Application_Menustrip, MenustripObject,
@@ -566,6 +725,13 @@ BOOL BuildGUI(struct Screen * myScreen)
             End,
             MUIA_Family_Child, MenuObject,
                 MUIA_Menu_Title, (ULONG)"Edit",
+                MUIA_Family_Child, menuCopyConfig = MenuitemObject,
+                    MUIA_Menuitem_Title, (ULONG)"Copy settings",
+                    MUIA_Menuitem_Shortcut, "C",
+                End,
+                MUIA_Family_Child, MenuitemObject,
+                    MUIA_Menuitem_Title, (APTR)-1,
+                End,
                 MUIA_Family_Child, menuDefaults = MenuitemObject,
                     MUIA_Menuitem_Title, (ULONG)"Reset to Defaults",
                     MUIA_Menuitem_Shortcut, "D",
@@ -747,6 +913,7 @@ BOOL BuildGUI(struct Screen * myScreen)
     lastUsedHook.h_Entry   = (HOOKFUNC)ResetToLastUsedHookFunc;
     openHook.h_Entry       = (HOOKFUNC)OpenHookFunc;
     saveAsHook.h_Entry     = (HOOKFUNC)SaveAsHookFunc;
+    copyConfigHook.h_Entry = (HOOKFUNC)CopyConfigHookFunc;
 
     DoMethod(slCropX, MUIM_Notify, MUIA_Numeric_Value, MUIV_EveryTime,
         app, 2, MUIM_CallHook, &cropOffsetHook);
@@ -792,6 +959,9 @@ BOOL BuildGUI(struct Screen * myScreen)
     
     DoMethod(menuSaveAs, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
         (ULONG)app, 2, MUIM_CallHook, &saveAsHook);
+
+    DoMethod(menuCopyConfig, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+        (ULONG)app, 2, MUIM_CallHook, &copyConfigHook);
 
     DoMethod(menuDefaults, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
         (ULONG)app, 2, MUIM_CallHook, &defaultsHook);
