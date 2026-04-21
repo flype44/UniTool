@@ -13,7 +13,6 @@ struct Preset {
     UWORD pr_C;
     UWORD pr_Aspect;
     UBYTE pr_Phase;
-    UBYTE pr_Scaler;
     UBYTE pr_Smooth;
     UBYTE pr_Integer;
     UBYTE pr_Scanlines;

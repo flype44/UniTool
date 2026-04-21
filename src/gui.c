@@ -2,15 +2,18 @@
 #include <graphics/displayinfo.h>
 #include <libraries/mui.h>
 
+#include <proto/asl.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/graphics.h>
 #include <proto/intuition.h>
 #include <proto/muimaster.h>
 #include <proto/unicam.h>
+#include <proto/devicetree.h>
 
 #include <clib/alib_protos.h>
 
+#include "presets.h"
 #include "messages.h"
 #include "rga_common.h"
 #include "rga_host.h"
@@ -32,8 +35,11 @@ Object *                chSmooth        = NULL;
 Object *                slB             = NULL;
 Object *                slC             = NULL;
 Object *                slPhase         = NULL;
+Object *                menuOpen        = NULL;
+Object *                menuSaveAs      = NULL;
 Object *                menuQuit        = NULL;
 Object *                menuDefaults    = NULL;
+Object *                menuLastUsed    = NULL;
 
 struct Hook kernelHook;
 struct Hook cropSizeHook;
@@ -41,6 +47,10 @@ struct Hook cropOffsetHook;
 struct Hook aspectHook;
 struct Hook configHook;
 struct Hook scanlineHook;
+struct Hook defaultsHook;
+struct Hook lastUsedHook;
+struct Hook openHook;
+struct Hook saveAsHook;
 struct Window *backdrop;
 struct Screen *screen;
 
@@ -225,7 +235,7 @@ void UpdateDList()
     }
 }
 
-ULONG CropOffsetHookFunc(struct Hook *hook, Object *app, void **params)
+ULONG CropOffsetHookFunc()
 {
     extern APTR UnicamBase;
     ULONG dx,dy;
@@ -240,7 +250,7 @@ ULONG CropOffsetHookFunc(struct Hook *hook, Object *app, void **params)
     return 0;
 }
 
-ULONG CropSizeHookFunc(struct Hook *hook, Object *app, void **params)
+ULONG CropSizeHookFunc()
 {
     extern APTR UnicamBase;
     ULONG width,height;
@@ -258,7 +268,7 @@ ULONG CropSizeHookFunc(struct Hook *hook, Object *app, void **params)
     return 0;
 }
 
-ULONG AspectHookFunc(struct Hook *hook, Object *app, void **params)
+ULONG AspectHookFunc()
 {
     extern APTR UnicamBase;
     ULONG aspect;
@@ -272,7 +282,7 @@ ULONG AspectHookFunc(struct Hook *hook, Object *app, void **params)
     return 0;
 }
 
-ULONG KernelHookFunc(struct Hook *hook, Object *app, void **params)
+ULONG KernelHookFunc()
 {
     extern APTR UnicamBase;
     ULONG b,c;
@@ -287,7 +297,7 @@ ULONG KernelHookFunc(struct Hook *hook, Object *app, void **params)
     return 0;
 }
 
-ULONG ConfigHookFunc(struct Hook *hook, Object *app, void **params)
+ULONG ConfigHookFunc()
 {
     extern APTR UnicamBase;
     ULONG cfg;
@@ -318,7 +328,7 @@ ULONG ConfigHookFunc(struct Hook *hook, Object *app, void **params)
     return 0;
 }
 
-ULONG ScanlineHookFunc(struct Hook *hook, Object *app, void **params)
+ULONG ScanlineHookFunc()
 {
     ULONG sc, scl;
 
@@ -326,6 +336,201 @@ ULONG ScanlineHookFunc(struct Hook *hook, Object *app, void **params)
     get(slScanlinesLaced, MUIA_Numeric_Value, &scl);
 
     rga_set_scanlines(sc, scl);
+
+    return 0;
+}
+
+ULONG ResetToDefaultsHookFunc()
+{
+    ULONG scan, scanl, w, h, x, y, aspect, b, c, phase, integer, smooth;
+
+    APTR DeviceTreeBase = OpenResource("devicetree.resource");
+    APTR key = DT_OpenKey("/emu68/unicam");
+
+    if (key)
+    {
+        const UWORD *u16;
+
+        u16 = DT_GetPropValue(DT_FindProperty(key, "size"));
+        w = u16[0];
+        h = u16[1];
+
+        u16 = DT_GetPropValue(DT_FindProperty(key, "offset"));
+        x = u16[0];
+        y = u16[1];
+
+        aspect = *(ULONG*)DT_GetPropValue(DT_FindProperty(key, "aspect-ratio"));
+        
+        u16 = DT_GetPropValue(DT_FindProperty(key, "scaler"));
+        phase = u16[1];
+
+        u16 = DT_GetPropValue(DT_FindProperty(key, "kernel"));
+        b = u16[0];
+        c = u16[1];
+
+        scan = *(ULONG*)DT_GetPropValue(DT_FindProperty(key, "scanlines"));
+        scanl = *(ULONG*)DT_GetPropValue(DT_FindProperty(key, "laced-scanlines"));
+
+        integer = !!DT_FindProperty(key, "integer-scaling");
+        smooth = !!DT_FindProperty(key, "smoothing");
+
+        DT_CloseKey(key);
+
+        set(slScanlines, MUIA_Numeric_Value, scan);
+        set(slScanlinesLaced, MUIA_Numeric_Value, scanl);
+        set(slCropW, MUIA_Numeric_Value, w);
+        set(slCropH, MUIA_Numeric_Value, h);
+        set(slCropX, MUIA_Numeric_Value, x);
+        set(slCropY, MUIA_Numeric_Value, y);
+        set(slAspect, MUIA_Numeric_Value, aspect);
+        set(slB, MUIA_Numeric_Value, b);
+        set(slC, MUIA_Numeric_Value, c);
+        set(slPhase, MUIA_Numeric_Value, phase);
+        set(chInteger, MUIA_Selected, integer ? TRUE : FALSE);
+        set(chSmooth, MUIA_Selected, smooth ? TRUE : FALSE);
+    }
+
+    return 0;
+}
+
+ULONG ResetToLastUsedHookFunc()
+{
+    set(slScanlines, MUIA_Numeric_Value, def_scan);
+    set(slScanlinesLaced, MUIA_Numeric_Value, def_scanl);
+    set(slCropW, MUIA_Numeric_Value, def_w);
+    set(slCropH, MUIA_Numeric_Value, def_h);
+    set(slCropX, MUIA_Numeric_Value, def_x);
+    set(slCropY, MUIA_Numeric_Value, def_y);
+    set(slAspect, MUIA_Numeric_Value, def_aspect);
+    set(slB, MUIA_Numeric_Value, def_b);
+    set(slC, MUIA_Numeric_Value, def_c);
+    set(slPhase, MUIA_Numeric_Value, def_phase);
+    set(chInteger, MUIA_Selected, def_integer ? TRUE : FALSE);
+    set(chSmooth, MUIA_Selected, def_smooth ? TRUE : FALSE);
+
+    return 0;
+}
+
+ULONG OpenHookFunc()
+{
+    struct Library *AslBase = OpenLibrary("asl.library", 0);
+    extern const char default_dir[];
+    if (AslBase != NULL)
+    {
+        struct FileRequester *fr = AllocAslRequest(ASL_FileRequest, NULL);
+        if (fr != NULL)
+        {
+            BOOL result = AslRequestTags(fr,
+                ASLFR_TitleText, (ULONG)"Open existing preset...",
+                ASLFR_DoSaveMode, FALSE,
+                ASLFR_RejectIcons, TRUE,
+                ASLFR_InitialDrawer, (ULONG)default_dir,
+                ASLFR_Screen, (ULONG)screen,
+                TAG_DONE, 0UL
+            );
+
+            if (result)
+            {
+                struct Preset p;
+                char *charptr;
+                char *c;
+                ULONG tmp;
+
+                if (LoadPreset(&p, fr->fr_File, fr->fr_Drawer))
+                {
+                    set(slScanlines, MUIA_Numeric_Value, p.pr_Scanlines);
+                    set(slScanlinesLaced, MUIA_Numeric_Value, p.pr_ScanlinesLaced);
+                    set(slCropW, MUIA_Numeric_Value, p.pr_Width);
+                    set(slCropH, MUIA_Numeric_Value, p.pr_Height);
+                    set(slCropX, MUIA_Numeric_Value, p.pr_DX);
+                    set(slCropY, MUIA_Numeric_Value, p.pr_DY);
+                    set(slAspect, MUIA_Numeric_Value, p.pr_Aspect);
+                    set(slB, MUIA_Numeric_Value, p.pr_B);
+                    set(slC, MUIA_Numeric_Value, p.pr_C);
+                    set(slPhase, MUIA_Numeric_Value, p.pr_Phase);
+                    set(chInteger, MUIA_Selected, p.pr_Integer ? TRUE : FALSE);
+                    set(chSmooth, MUIA_Selected, p.pr_Smooth ? TRUE : FALSE);
+                }
+            }
+
+            FreeAslRequest(fr);
+        }
+
+        CloseLibrary(AslBase);
+    }
+
+    return 0;
+}
+
+ULONG SaveAsHookFunc()
+{
+    struct Library *AslBase = OpenLibrary("asl.library", 0);
+    extern const char default_dir[];
+    if (AslBase != NULL)
+    {
+        struct FileRequester *fr = AllocAslRequest(ASL_FileRequest, NULL);
+        if (fr != NULL)
+        {
+            BOOL result = AslRequestTags(fr,
+                ASLFR_TitleText, (ULONG)"Give preset a name...",
+                ASLFR_DoSaveMode, TRUE,
+                ASLFR_RejectIcons, TRUE,
+                ASLFR_InitialDrawer, (ULONG)default_dir,
+                ASLFR_Screen, (ULONG)screen,
+                TAG_DONE, 0UL
+            );
+
+            if (result)
+            {
+                struct Preset p;
+                char *charptr;
+                char *c;
+                ULONG tmp;
+                
+                get(slCropW, MUIA_Numeric_Value, &tmp);
+                p.pr_Width = tmp;
+
+                get(slCropH, MUIA_Numeric_Value, &tmp);
+                p.pr_Height = tmp;
+
+                get(slCropX, MUIA_Numeric_Value, &tmp);
+                p.pr_DX = tmp;
+
+                get(slCropY, MUIA_Numeric_Value, &tmp);
+                p.pr_DY = tmp;
+
+                get(slAspect, MUIA_Numeric_Value, &tmp);
+                p.pr_Aspect = tmp;
+
+                get(slB, MUIA_Numeric_Value, &tmp);
+                p.pr_B = tmp;
+
+                get(slC, MUIA_Numeric_Value, &tmp);
+                p.pr_C = tmp;
+
+                get(slPhase, MUIA_Numeric_Value, &tmp);
+                p.pr_Phase = tmp;
+
+                get(slScanlines, MUIA_Numeric_Value, &tmp);
+                p.pr_Scanlines = tmp;
+
+                get(slScanlinesLaced, MUIA_Numeric_Value, &tmp);
+                p.pr_ScanlinesLaced = tmp;
+
+                get(chSmooth, MUIA_Selected, &tmp);
+                p.pr_Smooth = tmp;
+
+                get(chInteger, MUIA_Selected, &tmp);
+                p.pr_Integer = tmp;
+
+                SavePreset(&p, fr->fr_File, fr->fr_Drawer);
+            }
+
+            FreeAslRequest(fr);
+        }
+
+        CloseLibrary(AslBase);
+    }
 
     return 0;
 }
@@ -342,14 +547,32 @@ BOOL BuildGUI(struct Screen * myScreen)
         MUIA_Application_Menustrip, MenustripObject,
             MUIA_Family_Child, MenuObject,
                 MUIA_Menu_Title, (ULONG)"Project",
+                MUIA_Family_Child, menuOpen = MenuitemObject,
+                    MUIA_Menuitem_Title, (ULONG)"Open...",
+                    MUIA_Menuitem_Shortcut, "O",
+                End,
+                MUIA_Family_Child, menuSaveAs = MenuitemObject,
+                    MUIA_Menuitem_Title, (ULONG)"Save As...",
+                    MUIA_Menuitem_Shortcut, "A",
+                End,
+                MUIA_Family_Child, MenuitemObject,
+                    MUIA_Menuitem_Title, (APTR)-1,
+                End,
                 MUIA_Family_Child, menuQuit = MenuitemObject,
                     MUIA_Menuitem_Title, (ULONG)"Quit",
+                    MUIA_Menuitem_Shortcut, "Q",
                 End,
+                
             End,
             MUIA_Family_Child, MenuObject,
                 MUIA_Menu_Title, (ULONG)"Edit",
                 MUIA_Family_Child, menuDefaults = MenuitemObject,
                     MUIA_Menuitem_Title, (ULONG)"Reset to Defaults",
+                    MUIA_Menuitem_Shortcut, "D",
+                End,
+                MUIA_Family_Child, menuLastUsed = MenuitemObject,
+                    MUIA_Menuitem_Title, (ULONG)"Reset to last used",
+                    MUIA_Menuitem_Shortcut, "L",
                 End,
             End,
         End,
@@ -460,9 +683,6 @@ BOOL BuildGUI(struct Screen * myScreen)
                         End,
                     End,
                 End,
-
-                
-                
             End, // VGroup
         End, // WindowObject
     End; // ApplicationObject
@@ -470,10 +690,12 @@ BOOL BuildGUI(struct Screen * myScreen)
     RGA_VideoStatus vstat;
 
     rga_flush_pipe();
-    
+
     if (rga_get_video_status(&vstat)) {
-        set(slScanlines, MUIA_Numeric_Value, vstat.scanline_level);
-        set(slScanlinesLaced, MUIA_Numeric_Value, vstat.scanline_level_laced);
+        def_scan = vstat.scanline_level;
+        def_scanl = vstat.scanline_level_laced;
+        set(slScanlines, MUIA_Numeric_Value, def_scan);
+        set(slScanlinesLaced, MUIA_Numeric_Value, def_scanl);
     }
 
     DoMethod(win, MUIM_Window_SetCycleChain,
@@ -521,6 +743,10 @@ BOOL BuildGUI(struct Screen * myScreen)
     kernelHook.h_Entry     = (HOOKFUNC)KernelHookFunc;
     configHook.h_Entry     = (HOOKFUNC)ConfigHookFunc;
     scanlineHook.h_Entry   = (HOOKFUNC)ScanlineHookFunc;
+    defaultsHook.h_Entry   = (HOOKFUNC)ResetToDefaultsHookFunc;
+    lastUsedHook.h_Entry   = (HOOKFUNC)ResetToLastUsedHookFunc;
+    openHook.h_Entry       = (HOOKFUNC)OpenHookFunc;
+    saveAsHook.h_Entry     = (HOOKFUNC)SaveAsHookFunc;
 
     DoMethod(slCropX, MUIM_Notify, MUIA_Numeric_Value, MUIV_EveryTime,
         app, 2, MUIM_CallHook, &cropOffsetHook);
@@ -560,6 +786,18 @@ BOOL BuildGUI(struct Screen * myScreen)
 
     DoMethod(menuQuit, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
         (ULONG)app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+
+    DoMethod(menuOpen, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+        (ULONG)app, 2, MUIM_CallHook, &openHook);
+    
+    DoMethod(menuSaveAs, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+        (ULONG)app, 2, MUIM_CallHook, &saveAsHook);
+
+    DoMethod(menuDefaults, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+        (ULONG)app, 2, MUIM_CallHook, &defaultsHook);
+
+    DoMethod(menuLastUsed, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+        (ULONG)app, 2, MUIM_CallHook, &lastUsedHook);
 
     DoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
         app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);

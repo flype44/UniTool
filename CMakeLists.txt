@@ -4,6 +4,10 @@ project(UniTool VERSION 1.0.0)
 include(cmake/verstring.cmake)
 get_verstring(VERSTRING)
 
+if(NOT TARGET devicetree)
+    add_subdirectory(devicetree.resource EXCLUDE_FROM_ALL)
+endif()
+
 if(NOT TARGET unicam)
     add_subdirectory(unicam.resource EXCLUDE_FROM_ALL)
 endif()
@@ -19,6 +23,6 @@ target_link_options(UniTool PRIVATE -ffreestanding -m68040 -s -nostdlib -nostart
 target_compile_options(UniTool PRIVATE -Os -m68040 -m68881 -fomit-frame-pointer)
 target_compile_definitions(UniTool PRIVATE VERSION_STRING="${VERSTRING}")
 target_include_directories(UniTool PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(UniTool mui amiga unicam)
+target_link_libraries(UniTool mui amiga unicam devicetree)
 
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/UniTool DESTINATION UniTool/)

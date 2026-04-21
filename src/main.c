@@ -174,10 +174,6 @@ int main(int wantGUI)
                             aspect = p.pr_Aspect;
                         }
 
-                        if (p.pr_Scaler <= 3) {
-                            scaler = p.pr_Scaler;
-                        }
-
                         phase = p.pr_Phase;
                         smooth = p.pr_Smooth;
                         integer = p.pr_Integer;
