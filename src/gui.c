@@ -26,6 +26,7 @@ struct IntuitionBase *  IntuitionBase   = NULL;
 struct Library *        MUIMasterBase   = NULL;
 Object *                app             = NULL;
 Object *                win             = NULL;
+Object *                aboutWin        = NULL;
 Object *                slCropX         = NULL;
 Object *                slCropY         = NULL;
 Object *                slCropW         = NULL;
@@ -41,9 +42,15 @@ Object *                slPhase         = NULL;
 Object *                menuOpen        = NULL;
 Object *                menuSaveAs      = NULL;
 Object *                menuCopyConfig  = NULL;
+Object *                menuAbout       = NULL;
 Object *                menuQuit        = NULL;
 Object *                menuDefaults    = NULL;
 Object *                menuLastUsed    = NULL;
+Object *                closeAbout      = NULL;
+Object *                txEmuVer        = NULL;
+Object *                txFTVer         = NULL;
+Object *                txFTGit         = NULL;
+Object *                vg              = NULL;
 
 struct Hook kernelHook;
 struct Hook cropSizeHook;
@@ -54,6 +61,7 @@ struct Hook scanlineHook;
 struct Hook defaultsHook;
 struct Hook lastUsedHook;
 struct Hook openHook;
+struct Hook aboutHook;
 struct Hook saveAsHook;
 struct Hook copyConfigHook;
 struct Window *backdrop;
@@ -693,6 +701,47 @@ ULONG SaveAsHookFunc()
     return 0;
 }
 
+ULONG AboutHookFunc()
+{
+    static char ver[32] = {0};
+    static char git[32] = {0};
+    static char ever[32] = {0};
+
+    APTR DeviceTreeBase = OpenResource("devicetree.resource");
+    APTR key = DT_OpenKey("/emu68");
+
+    if (key) {
+        const ULONG *v = DT_GetPropValue(DT_FindProperty(key, "version"));
+        char *ptr = ever;
+
+        RawDoFmt("%ld.%ld.%ld", (APTR)v, (void*)StuffChar, &ptr);
+
+        set(txEmuVer, MUIA_Text_Contents, (ULONG)ever);
+
+        DT_CloseKey(key);
+    }
+
+
+    if (rga_get_string(FTCMD_GET_VERSION, ver, 32)) {
+        set(txFTVer, MUIA_Text_Contents, (ULONG)ver);
+    }
+    else {
+        set(txFTVer, MUIA_Text_Contents, (ULONG)"N/A");
+    }
+    if (rga_get_string(FTCMD_GET_GIT, git, 32)) {
+        set(txFTGit, MUIA_Text_Contents, (ULONG)git);
+    } else {
+        set(txFTGit, MUIA_Text_Contents, (ULONG)"N/A");
+    }
+    
+    set(aboutWin, MUIA_Window_Open, TRUE);
+
+    return 0;
+}
+
+#define RLabel1(label) MUI_MakeObject(MUIO_Label,(unsigned long)label,MUIO_Label_SingleFrame)
+#define CLabel1(label) MUI_MakeObject(MUIO_Label,(unsigned long)label,MUIO_Label_Centered|MUIO_Label_SingleFrame)
+
 BOOL BuildGUI(struct Screen * myScreen)
 {
     extern const char version[];
@@ -717,6 +766,12 @@ BOOL BuildGUI(struct Screen * myScreen)
                 MUIA_Family_Child, MenuitemObject,
                     MUIA_Menuitem_Title, (APTR)-1,
                 End,
+                MUIA_Family_Child, menuAbout = MenuitemObject,
+                    MUIA_Menuitem_Title, (ULONG)"About...",
+                End,
+                MUIA_Family_Child, MenuitemObject,
+                    MUIA_Menuitem_Title, (APTR)-1,
+                End,
                 MUIA_Family_Child, menuQuit = MenuitemObject,
                     MUIA_Menuitem_Title, (ULONG)"Quit",
                     MUIA_Menuitem_Shortcut, "Q",
@@ -726,7 +781,7 @@ BOOL BuildGUI(struct Screen * myScreen)
             MUIA_Family_Child, MenuObject,
                 MUIA_Menu_Title, (ULONG)"Edit",
                 MUIA_Family_Child, menuCopyConfig = MenuitemObject,
-                    MUIA_Menuitem_Title, (ULONG)"Copy settings",
+                    MUIA_Menuitem_Title, (ULONG)"Copy settings to clipboard",
                     MUIA_Menuitem_Shortcut, "C",
                 End,
                 MUIA_Family_Child, MenuitemObject,
@@ -743,6 +798,37 @@ BOOL BuildGUI(struct Screen * myScreen)
             End,
         End,
 
+        SubWindow, aboutWin = WindowObject,
+            MUIA_Window_Screen,       myScreen,
+            MUIA_Window_LeftEdge,     MUIV_Window_LeftEdge_Centered,
+            MUIA_Window_TopEdge,      MUIV_Window_TopEdge_Centered,
+            MUIA_Window_Borderless,   TRUE,
+            MUIA_Window_Title,        NULL,
+            MUIA_Window_CloseGadget,  FALSE,
+            MUIA_Window_DragBar,      FALSE,
+            MUIA_Window_DepthGadget,  FALSE,
+            MUIA_Window_SizeGadget,   FALSE,
+
+            WindowContents, VGroup, GroupFrame,
+                Child, CLabel1("UniTool"),
+                Child, CLabel1("Adjustment utility for"),
+                Child, CLabel1("Framethrower"),
+                Child, VSpace(10),
+                Child, ColGroup(2),
+                    Child, RLabel1("UniTool version:"),
+                    Child, LLabel1(VERSION_NUMBER),
+                    Child, RLabel1("Emu68 version:"),
+                    Child, txEmuVer = LLabel1(""),
+                    Child, RLabel1("Framethrower version:"),
+                    Child, txFTVer = LLabel1(""),
+                    Child, RLabel1("Framethrower git:"),
+                    Child, txFTGit = LLabel1(""),
+                End,
+                Child, VSpace(10),
+                Child, closeAbout = SimpleButton("Dismiss"),
+            End,
+        End,
+
         SubWindow, win = WindowObject,
             MUIA_Window_Screen,       myScreen,
             MUIA_Window_LeftEdge,     MUIV_Window_LeftEdge_Centered,
@@ -754,8 +840,7 @@ BOOL BuildGUI(struct Screen * myScreen)
             MUIA_Window_DepthGadget,  FALSE,
             MUIA_Window_SizeGadget,   FALSE,
 
-            
-            WindowContents, VGroup,
+            WindowContents, vg = VGroup,
                 /* ---- Crop ---- */
                 Child, VGroup, GroupFrameT("Image Crop and Size"),
                     Child, ColGroup(2),
@@ -914,6 +999,7 @@ BOOL BuildGUI(struct Screen * myScreen)
     openHook.h_Entry       = (HOOKFUNC)OpenHookFunc;
     saveAsHook.h_Entry     = (HOOKFUNC)SaveAsHookFunc;
     copyConfigHook.h_Entry = (HOOKFUNC)CopyConfigHookFunc;
+    aboutHook.h_Entry      = (HOOKFUNC)AboutHookFunc;
 
     DoMethod(slCropX, MUIM_Notify, MUIA_Numeric_Value, MUIV_EveryTime,
         app, 2, MUIM_CallHook, &cropOffsetHook);
@@ -968,9 +1054,21 @@ BOOL BuildGUI(struct Screen * myScreen)
 
     DoMethod(menuLastUsed, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
         (ULONG)app, 2, MUIM_CallHook, &lastUsedHook);
+    
+    DoMethod(menuAbout, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+        (ULONG)app, 2, MUIM_CallHook, &aboutHook);
+
+    DoMethod(menuAbout, MUIM_Notify, MUIA_Menuitem_Trigger, MUIV_EveryTime,
+        (ULONG)vg, 3, MUIM_Set, MUIA_Disabled, TRUE);
 
     DoMethod(win, MUIM_Notify, MUIA_Window_CloseRequest, TRUE,
         app, 2, MUIM_Application_ReturnID, MUIV_Application_ReturnID_Quit);
+
+    DoMethod(closeAbout, MUIM_Notify, MUIA_Pressed, FALSE,
+        aboutWin, 3, MUIM_Set, MUIA_Window_Open, FALSE);
+
+    DoMethod(closeAbout, MUIM_Notify, MUIA_Pressed, FALSE,
+        vg, 3, MUIM_Set, MUIA_Disabled, FALSE);
 
     return app != NULL;
 }

@@ -21,7 +21,7 @@ add_executable(UniTool
 
 target_link_options(UniTool PRIVATE -ffreestanding -m68040 -s -nostdlib -nostartfiles -Wl,-e,__start)
 target_compile_options(UniTool PRIVATE -Os -m68040 -m68881 -fomit-frame-pointer)
-target_compile_definitions(UniTool PRIVATE VERSION_STRING="${VERSTRING}")
+target_compile_definitions(UniTool PRIVATE VERSION_STRING="${VERSTRING}" VERSION_NUMBER="${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}")
 target_include_directories(UniTool PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(UniTool mui amiga unicam devicetree)
 
