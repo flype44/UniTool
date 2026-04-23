@@ -1,0 +1,72 @@
+; UniTool.cd
+MSG_MENU_PROJECT (//)
+Project
+MSG_MENU_OPEN (//)
+Open...
+MSG_MENU_SAVE_AS (//)
+Save As...
+MSG_MENU_ABOUT (//)
+About...
+MSG_MENU_QUIT (//)
+Quit
+MSG_MENU_EDIT (//)
+Edit
+MSG_MENU_COPY_TO_CLIPBOARD (//)
+Copy config.txt settings to clipboard
+MSG_MENU_RESET_TO_DEFAULTS (//)
+Reset to Defaults
+MSG_MENU_RESET_TO_LAST_USED (//)
+Reset to last used
+MSG_ASL_OPEN_PRESET (//)
+Open existing preset...
+MSG_ASL_SAVE_PRESET (//)
+Give preset a name...
+MSG_NOT_AVAILABLE (//)
+N/A
+MSG_ABOUT_TEXT (//)
+Adjustment utility for\nFramethrower
+MSG_ABOUT_VERSION (//)
+UniTool version:
+MSG_ABOUT_EMU68_VERSION (//)
+Emu68 version:
+MSG_ABOUT_FT_VERSION (//)
+Framethrower version:
+MSG_ABOUT_FT_GIT (//)
+Framethrower git:
+MSG_ABOUT_DISMISS (//)
+Dismiss
+MSG_IMAGE_CROP_AND_SIZE (//)
+Image Crop and Size
+MSG_WIDTH (//)
+Width
+MSG_HEIGHT (//)
+Height
+MSG_OFFSET_X (//)
+Offset X
+MSG_OFFSET_Y (//)
+Offset Y
+MSG_ASPECT_RATIO (//)
+Aspect ratio
+MSG_SCALING_AND_SMOOTHING (//)
+Scaling and Smoothing
+MSG_INTEGER_ONLY (//)
+Integer only
+MSG_SMOOTHING (//)
+Smoothing
+MSG_KERNEL_B (//)
+Kernel B
+MSG_KERNEL_C (//)
+Kernel C
+MSG_PHASE (//)
+Phase
+MSG_SCANLINES (//)
+Scanlines
+MSG_SCANLINES_NORMAL (//)
+Scanlines normal
+MSG_SCANLINES_LACED (//)
+Scanlines laced
+MSG_FAILED_TO_OPEN_NAME_VERSION (//)
+Failed to open %s version %ld\n
+MSG_LOADING_PRESET (//)
+Loading preset '%s'\n
+;

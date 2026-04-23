@@ -5,13 +5,13 @@
 # Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
 # with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function(add_catalog CATALOG_NAME OUTPUT_NAME)
+function(add_catalog CATALOG_NAME OUTPUT_NAME DESTINATION_INSTALL_DIR)
     
     # Use flexcat to build header file
     add_custom_command(
         OUTPUT includes/${OUTPUT_NAME}
         COMMAND flexcat "${CMAKE_CURRENT_SOURCE_DIR}/${CATALOG_NAME}"
-                        includes/${OUTPUT_NAME}=${CMAKE_SOURCE_DIR}/templates/C_h_aros.sd || [ $$? -lt 10 ]
+                        includes/${OUTPUT_NAME}=${CMAKE_SOURCE_DIR}/templates/C_h_simple.sd || [ $$? -lt 10 ]
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${CATALOG_NAME}
     )
 
@@ -52,7 +52,7 @@ function(add_catalog CATALOG_NAME OUTPUT_NAME)
         
         # Make install target
         install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${LANGUAGE}/${CAT}.catalog 
-                DESTINATION ./Catalogs/${LANGUAGE})
+                DESTINATION ${DESTINATION_INSTALL_DIR}/Catalogs/${LANGUAGE}/)
 
         # Add translations as private sources to catalogs target
         target_sources(catalogs PRIVATE ${LANGUAGE}/${CAT}.catalog)

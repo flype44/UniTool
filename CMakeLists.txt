@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.14.0)
 project(UniTool VERSION 1.0.0)
 
 include(cmake/verstring.cmake)
+include(cmake/catalogs.cmake)
+
 get_verstring(VERSTRING)
 
 if(NOT TARGET devicetree)
@@ -17,12 +19,15 @@ add_executable(UniTool
     src/gui.c
     src/presets.c
     src/rga_host.c
+    src/locale.c
 )
+
+add_catalog(catalogs/UniTool.cd strings.h UniTool/)
 
 target_link_options(UniTool PRIVATE -ffreestanding -m68040 -s -nostdlib -nostartfiles -Wl,-e,__start)
 target_compile_options(UniTool PRIVATE -Os -m68040 -m68881 -fomit-frame-pointer)
 target_compile_definitions(UniTool PRIVATE VERSION_STRING="${VERSTRING}" VERSION_NUMBER="${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}")
 target_include_directories(UniTool PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(UniTool mui amiga unicam devicetree)
+target_link_libraries(UniTool mui amiga unicam devicetree catalogs)
 
 install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/UniTool DESTINATION UniTool/)

@@ -1,0 +1,110 @@
+## version $VER: unitool.catalog 1.0 (22.04.2026)
+## language deutsch
+## codeset 0
+;
+;
+MSG_MENU_PROJECT
+Projekt
+;
+MSG_MENU_OPEN
+Öffnen...
+;
+MSG_MENU_SAVE_AS
+Speichern unter...
+;
+MSG_MENU_ABOUT
+Über...
+;
+MSG_MENU_QUIT
+Beenden
+;
+MSG_MENU_EDIT
+Editieren
+;
+MSG_MENU_COPY_TO_CLIPBOARD
+Einstellungen für config.txt kopieren
+;
+MSG_MENU_RESET_TO_DEFAULTS
+Auf Standardwerte zurücksetzen
+;
+MSG_MENU_RESET_TO_LAST_USED
+Auf zuletzt verwendete Werte zurücksetzen
+;
+MSG_ASL_OPEN_PRESET
+Vorhandenes Preset öffnen...
+;
+MSG_ASL_SAVE_PRESET
+Preset benennen...
+;
+MSG_NOT_AVAILABLE
+N/V
+;
+MSG_ABOUT_TEXT
+Einstellungsprogramm für\nFramethrower
+;
+MSG_ABOUT_VERSION
+UniTool Version:
+;
+MSG_ABOUT_EMU68_VERSION
+Emu68 Version:
+;
+MSG_ABOUT_FT_VERSION
+Framethrower Version:
+;
+MSG_ABOUT_FT_GIT
+Framethrower Git:
+;
+MSG_ABOUT_DISMISS
+Schließen
+;
+MSG_IMAGE_CROP_AND_SIZE
+Bildausschnitt und Größe
+;
+MSG_WIDTH
+Breite
+;
+MSG_HEIGHT
+Höhe
+;
+MSG_OFFSET_X
+Versatz X
+;
+MSG_OFFSET_Y
+Versatz Y
+;
+MSG_ASPECT_RATIO
+Seitenverhältnis
+;
+MSG_SCALING_AND_SMOOTHING
+Skalierung und Glättung
+;
+MSG_INTEGER_ONLY
+Nur ganzzahlig
+;
+MSG_SMOOTHING
+Glättung
+;
+MSG_KERNEL_B
+Kernel B
+;
+MSG_KERNEL_C
+Kernel C
+;
+MSG_PHASE
+Phase
+;
+MSG_SCANLINES
+Scanlinien
+;
+MSG_SCANLINES_NORMAL
+Scanlinien normal
+;
+MSG_SCANLINES_LACED
+Scanlinien laced
+;
+MSG_FAILED_TO_OPEN_NAME_VERSION
+Fehler beim Öffnen von %s Version %ld\n
+;
+MSG_LOADING_PRESET
+Preset '%s' wird geladen\n
+;

@@ -7,6 +7,11 @@
 #include "messages.h"
 #include "presets.h"
 #include "gui.h"
+#include "locale.h"
+
+#define CATCOMP_NUMBERS
+
+#include "strings.h"
 
 int main(int);
 
@@ -27,6 +32,8 @@ int _start()
     }
 
     ret = main(wbmsg ? 1 : 0);
+
+    CleanupLocale();
 
     if (wbmsg)
     {
@@ -82,6 +89,8 @@ int main(int wantGUI)
     if (((struct Library *)UnicamBase)->lib_Version < 1 ||
         (((struct Library *)UnicamBase)->lib_Version == 1 && ((struct Library *)UnicamBase)->lib_Revision < 3))
         return -1;
+
+    InitLocale();
 
     DOSBase = (struct DosLibrary *)OpenLibrary("dos.library", 37);
     if (DOSBase == NULL)
@@ -141,7 +150,7 @@ int main(int wantGUI)
                     if (LoadPreset(&p, name, NULL))
                     {
                         if (!silent) {
-                            Printf("Loading preset '%s'\n", (ULONG)name);
+                            Printf(_(MSG_LOADING_PRESET), (ULONG)name);
                         }
 
                         wantGUI = 0;

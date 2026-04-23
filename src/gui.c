@@ -3,6 +3,7 @@
 #include <libraries/mui.h>
 #include <libraries/iffparse.h>
 #include <datatypes/textclass.h>
+#include <intuition/screens.h>
 
 #include <proto/asl.h>
 #include <proto/exec.h>
@@ -20,6 +21,11 @@
 #include "messages.h"
 #include "rga_common.h"
 #include "rga_host.h"
+#include "locale.h"
+
+#define CATCOMP_NUMBERS
+
+#include "strings.h"
 
 struct GfxBase *        GfxBase         = NULL;
 struct IntuitionBase *  IntuitionBase   = NULL;
@@ -198,31 +204,6 @@ void OpenPALScreen(void)
     Move(rp, arm, 400 - 1); Draw(rp, 0, 400 - 1); Draw(rp, 0, 400 - arm - 1);
     /* bottom-right */
     Move(rp, sw - arm, 400 - 1); Draw(rp, sw - 1, 400 - 1); Draw(rp, sw - 1, 400 - arm - 1);
-}
-
-void CloneWorkbenchPalette(struct Screen *destScreen)
-{
-    struct Screen *wb = LockPubScreen("Workbench");
-    if (!wb) return;
-
-    struct ColorMap *cm = wb->ViewPort.ColorMap;
-    UWORD numColors = cm->Count;
-
-    /* GetRGB32 wants a buffer of (numColors * 3) + 2 LONGs
-       format: [count<<16 | firstcolor, R, G, B, R, G, B, ..., 0] */
-    ULONG *palBuf = AllocVec((numColors * 3 + 2) * sizeof(ULONG), MEMF_ANY);
-    if (palBuf)
-    {
-        GetRGB32(cm, 0, numColors, palBuf + 1);
-        palBuf[0] = (ULONG)numColors << 16 | 0;  /* count | first */
-        palBuf[numColors * 3 + 1] = 0;            /* terminator */
-
-        LoadRGB32(&destScreen->ViewPort, palBuf);
-
-        FreeVec(palBuf);
-    }
-
-    UnlockPubScreen(NULL, wb);
 }
 
 void UpdateDList()
@@ -587,7 +568,7 @@ ULONG OpenHookFunc()
         if (fr != NULL)
         {
             BOOL result = AslRequestTags(fr,
-                ASLFR_TitleText, (ULONG)"Open existing preset...",
+                ASLFR_TitleText, (ULONG)_(MSG_ASL_OPEN_PRESET),
                 ASLFR_DoSaveMode, FALSE,
                 ASLFR_RejectIcons, TRUE,
                 ASLFR_InitialDrawer, (ULONG)default_dir,
@@ -638,7 +619,7 @@ ULONG SaveAsHookFunc()
         if (fr != NULL)
         {
             BOOL result = AslRequestTags(fr,
-                ASLFR_TitleText, (ULONG)"Give preset a name...",
+                ASLFR_TitleText, (ULONG)_(MSG_ASL_SAVE_PRESET),
                 ASLFR_DoSaveMode, TRUE,
                 ASLFR_RejectIcons, TRUE,
                 ASLFR_InitialDrawer, (ULONG)default_dir,
@@ -726,12 +707,12 @@ ULONG AboutHookFunc()
         set(txFTVer, MUIA_Text_Contents, (ULONG)ver);
     }
     else {
-        set(txFTVer, MUIA_Text_Contents, (ULONG)"N/A");
+        set(txFTVer, MUIA_Text_Contents, (ULONG)_(MSG_NOT_AVAILABLE));
     }
     if (rga_get_string(FTCMD_GET_GIT, git, 32)) {
         set(txFTGit, MUIA_Text_Contents, (ULONG)git);
     } else {
-        set(txFTGit, MUIA_Text_Contents, (ULONG)"N/A");
+        set(txFTGit, MUIA_Text_Contents, (ULONG)_(MSG_NOT_AVAILABLE));
     }
     
     set(aboutWin, MUIA_Window_Open, TRUE);
@@ -754,45 +735,45 @@ BOOL BuildGUI(struct Screen * myScreen)
 
         MUIA_Application_Menustrip, MenustripObject,
             MUIA_Family_Child, MenuObject,
-                MUIA_Menu_Title, (ULONG)"Project",
+                MUIA_Menu_Title, (ULONG)_(MSG_MENU_PROJECT),
                 MUIA_Family_Child, menuOpen = MenuitemObject,
-                    MUIA_Menuitem_Title, (ULONG)"Open...",
+                    MUIA_Menuitem_Title, (ULONG)_(MSG_MENU_OPEN),
                     MUIA_Menuitem_Shortcut, "O",
                 End,
                 MUIA_Family_Child, menuSaveAs = MenuitemObject,
-                    MUIA_Menuitem_Title, (ULONG)"Save As...",
+                    MUIA_Menuitem_Title, (ULONG)_(MSG_MENU_SAVE_AS),
                     MUIA_Menuitem_Shortcut, "A",
                 End,
                 MUIA_Family_Child, MenuitemObject,
                     MUIA_Menuitem_Title, (APTR)-1,
                 End,
                 MUIA_Family_Child, menuAbout = MenuitemObject,
-                    MUIA_Menuitem_Title, (ULONG)"About...",
+                    MUIA_Menuitem_Title, (ULONG)_(MSG_MENU_ABOUT),
                 End,
                 MUIA_Family_Child, MenuitemObject,
                     MUIA_Menuitem_Title, (APTR)-1,
                 End,
                 MUIA_Family_Child, menuQuit = MenuitemObject,
-                    MUIA_Menuitem_Title, (ULONG)"Quit",
+                    MUIA_Menuitem_Title, (ULONG)_(MSG_MENU_QUIT),
                     MUIA_Menuitem_Shortcut, "Q",
                 End,
                 
             End,
             MUIA_Family_Child, MenuObject,
-                MUIA_Menu_Title, (ULONG)"Edit",
+                MUIA_Menu_Title, (ULONG)_(MSG_MENU_EDIT),
                 MUIA_Family_Child, menuCopyConfig = MenuitemObject,
-                    MUIA_Menuitem_Title, (ULONG)"Copy settings to clipboard",
+                    MUIA_Menuitem_Title, (ULONG)_(MSG_MENU_COPY_TO_CLIPBOARD),
                     MUIA_Menuitem_Shortcut, "C",
                 End,
                 MUIA_Family_Child, MenuitemObject,
                     MUIA_Menuitem_Title, (APTR)-1,
                 End,
                 MUIA_Family_Child, menuDefaults = MenuitemObject,
-                    MUIA_Menuitem_Title, (ULONG)"Reset to Defaults",
+                    MUIA_Menuitem_Title, (ULONG)_(MSG_MENU_RESET_TO_DEFAULTS),
                     MUIA_Menuitem_Shortcut, "D",
                 End,
                 MUIA_Family_Child, menuLastUsed = MenuitemObject,
-                    MUIA_Menuitem_Title, (ULONG)"Reset to last used",
+                    MUIA_Menuitem_Title, (ULONG)_(MSG_MENU_RESET_TO_LAST_USED),
                     MUIA_Menuitem_Shortcut, "L",
                 End,
             End,
@@ -810,22 +791,31 @@ BOOL BuildGUI(struct Screen * myScreen)
             MUIA_Window_SizeGadget,   FALSE,
 
             WindowContents, VGroup, GroupFrame,
-                Child, CLabel1("UniTool"),
-                Child, CLabel1("Adjustment utility for"),
-                Child, CLabel1("Framethrower"),
+                Child, VSpace(5),
+                Child, TextObject,
+                    MUIA_Text_PreParse, "\033b\033c",
+                    MUIA_Text_Contents, "UniTool",
+                End,
+                Child, VSpace(5),
+                Child, CLabel1(_(MSG_ABOUT_TEXT)),
                 Child, VSpace(10),
                 Child, ColGroup(2),
-                    Child, RLabel1("UniTool version:"),
+                    Child, RLabel1(_(MSG_ABOUT_VERSION)),
                     Child, LLabel1(VERSION_NUMBER),
-                    Child, RLabel1("Emu68 version:"),
+                    Child, RLabel1(_(MSG_ABOUT_EMU68_VERSION)),
                     Child, txEmuVer = LLabel1(""),
-                    Child, RLabel1("Framethrower version:"),
+                    Child, RLabel1(_(MSG_ABOUT_FT_VERSION)),
                     Child, txFTVer = LLabel1(""),
-                    Child, RLabel1("Framethrower git:"),
+                    Child, RLabel1(_(MSG_ABOUT_FT_GIT)),
                     Child, txFTGit = LLabel1(""),
                 End,
-                Child, VSpace(10),
-                Child, closeAbout = SimpleButton("Dismiss"),
+                Child, VSpace(12),
+                Child, HGroup,
+                    Child, HSpace(0),
+                    Child, closeAbout = SimpleButton(_(MSG_ABOUT_DISMISS)),
+                    Child, HSpace(0),
+                End,
+                Child, VSpace(5),
             End,
         End,
 
@@ -842,9 +832,9 @@ BOOL BuildGUI(struct Screen * myScreen)
 
             WindowContents, vg = VGroup,
                 /* ---- Crop ---- */
-                Child, VGroup, GroupFrameT("Image Crop and Size"),
+                Child, VGroup, GroupFrameT(_(MSG_IMAGE_CROP_AND_SIZE)),
                     Child, ColGroup(2),
-                        Child, LLabel1("Width"),
+                        Child, LLabel1(_(MSG_WIDTH)),
                         Child, slCropW = SliderObject,
                             MUIA_Slider_Min, 1, MUIA_Slider_Max, 720,
                             MUIA_Slider_Level, 720,
@@ -852,25 +842,25 @@ BOOL BuildGUI(struct Screen * myScreen)
                             MUIA_MinWidth, 100,
                         End,
 
-                        Child, LLabel1("Height"),
+                        Child, LLabel1(_(MSG_HEIGHT)),
                         Child, slCropH = SliderObject,
                             MUIA_Slider_Min, 1, MUIA_Slider_Max, 576,
                             MUIA_Slider_Level, 576,
                         End,
 
-                        Child, LLabel1("Offset X"),
+                        Child, LLabel1(_(MSG_OFFSET_X)),
                         Child, slCropX = SliderObject,
                             MUIA_Slider_Min, 0, MUIA_Slider_Max, 719,
                             MUIA_Slider_Level, 0,
                         End,
 
-                        Child, LLabel1("Offset Y"),
+                        Child, LLabel1(_(MSG_OFFSET_Y)),
                         Child, slCropY = SliderObject,
                             MUIA_Slider_Min, 0, MUIA_Slider_Max, 575,
                             MUIA_Slider_Level, 0,
                         End,
 
-                        Child, LLabel1("Aspect"),
+                        Child, LLabel1(_(MSG_ASPECT_RATIO)),
                         Child, slAspect = SliderObject,
                             MUIA_Slider_Min,   300,
                             MUIA_Slider_Max,   3000,
@@ -879,20 +869,20 @@ BOOL BuildGUI(struct Screen * myScreen)
                     End,
                 End,
                 /* ---- Scale ---- */
-                Child, VGroup, GroupFrameT("Scaling and Smoothing"),
+                Child, VGroup, GroupFrameT(_(MSG_SCALING_AND_SMOOTHING)),
                     Child, ColGroup(2),
-                        Child, LLabel1("Integer only"),
+                        Child, LLabel1(_(MSG_INTEGER_ONLY)),
                         Child, HGroup,
                             Child, chInteger = CheckMark(FALSE),
                             Child, HSpace(0),
-                            Child, LLabel1("Smoothing"),
+                            Child, LLabel1(_(MSG_SMOOTHING)),
                             Child, HGroup,
                                 Child, chSmooth = CheckMark(FALSE),
                                 Child, HSpace(0),
                             End,
                         End,
 
-                        Child, LLabel1("Kernel B"),
+                        Child, LLabel1(_(MSG_KERNEL_B)),
                         Child, slB = SliderObject,
                             MUIA_Slider_Min,   0,
                             MUIA_Slider_Max,   1000,
@@ -900,14 +890,14 @@ BOOL BuildGUI(struct Screen * myScreen)
                             MUIA_MinWidth,     100,
                         End,
 
-                        Child, LLabel1("Kernel C"),
+                        Child, LLabel1(_(MSG_KERNEL_C)),
                         Child, slC = SliderObject,
                             MUIA_Slider_Min,   0,
                             MUIA_Slider_Max,   1000,
                             MUIA_Slider_Level, 333,
                         End,
                         
-                        Child, LLabel1("Phase"),
+                        Child, LLabel1(_(MSG_PHASE)),
                         Child, slPhase = SliderObject,
                             MUIA_Slider_Min,   0,
                             MUIA_Slider_Max,   255,
@@ -916,9 +906,9 @@ BOOL BuildGUI(struct Screen * myScreen)
                     End,
                 End,
                 /* ---- Image ---- */
-                Child, VGroup, GroupFrameT("Scanlines"),
+                Child, VGroup, GroupFrameT(_(MSG_SCANLINES)),
                     Child, ColGroup(2),
-                        Child, LLabel1("Scanlines Normal"),
+                        Child, LLabel1(_(MSG_SCANLINES_NORMAL)),
                         Child, slScanlines = SliderObject,
                             MUIA_Slider_Min,   0,
                             MUIA_Slider_Max,   4,
@@ -926,7 +916,7 @@ BOOL BuildGUI(struct Screen * myScreen)
                             MUIA_MinWidth, 40,
                         End,
 
-                        Child, LLabel1("Scanlines Laced"),
+                        Child, LLabel1(_(MSG_SCANLINES_LACED)),
                         Child, slScanlinesLaced = SliderObject,
                             MUIA_Slider_Min,   0,
                             MUIA_Slider_Max,   4,
@@ -1123,23 +1113,20 @@ int StartGUI()
             }
             else
             {
-                Printf("Failed to open %s version %ld\n", (ULONG)MUIMASTER_NAME, MUIMASTER_VMIN);
+                Printf(_(MSG_FAILED_TO_OPEN_NAME_VERSION), (ULONG)MUIMASTER_NAME, MUIMASTER_VMIN);
             }
 
             CloseLibrary((struct Library *)IntuitionBase);
         }
         else
         {
-            Printf("Failed to open %s version %ld\n", (ULONG)"intuition.library", 39);
+            Printf(_(MSG_FAILED_TO_OPEN_NAME_VERSION), (ULONG)"intuition.library", 39);
         }
 
         CloseLibrary((struct Library *)GfxBase);
     }
     else
     {
-        Printf("Failed to open %s version %ld\n", (ULONG)"graphics.library", 39);
+        Printf(_(MSG_FAILED_TO_OPEN_NAME_VERSION), (ULONG)"graphics.library", 39);
     }
-
-    
-    
 }
